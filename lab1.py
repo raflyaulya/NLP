@@ -1,47 +1,66 @@
-# Импорт библиотек
-import pymorphy3
+import re
+from tqdm import tqdm
 import nltk
+from nltk.tokenize import word_tokenize
+import pymorphy3
 
-# Загрузка токенизатора NLTK
-nltk.download('punkt_tab')
+# Uncomment the following line if running for the first time
+# nltk.download('punkt')
 
+def process_text(file_path):
+    # Reading the file content
+    with open(file_path, 'r', encoding='utf-8') as file:
+        text_content = file.read()
+    
+    # Tokenizing the text into individual words
+    tokens = word_tokenize(text_content)
 
-# Чтение файла
-with open('file_text.txt', 'r', encoding='utf-8') as f:
-    text = f.read()
+    # Initializing the morphological analyzer
+    morph_analyzer = pymorphy3.MorphAnalyzer()
 
-# Токенизация текста
-tokens = nltk.word_tokenize(text)
+    # Initialize variables for result collection and word tracking
+    matched_pairs = []
+    previous_word = {'word': '', 'POS': '', 'gender': '', 'number': '', 'case': '', 'index': -2}
 
-# Инициализация морфологического анализатора pymorphy3
-morph = pymorphy3.MorphAnalyzer()
+    # Loop through each word token with progress bar
+    for i in tqdm(range(len(tokens))):
+        current_word = morph_analyzer.parse(tokens[i])[0]  # Get the morphological parsing of the word
+        current_tag = current_word.tag
+        
+        # Check if the word is either a noun or an adjective
+        if current_tag.POS in ['NOUN', 'ADJF']:
+            # Check for agreement in gender, number, and case between consecutive words
+            if (i - previous_word['index'] == 1 and previous_word['gender'] == current_tag.gender and
+                previous_word['number'] == current_tag.number and previous_word['case'] == current_tag.case and
+                previous_word['POS'] != current_tag.POS):
+                
+                # Append the matching word pair to results
+                matched_pairs.append(f"{previous_word['word']} {current_word.normal_form}")
+            
+            # Update the details of the current word for future comparison
+            previous_word.update({
+                'word': current_word.normal_form,
+                'POS': current_tag.POS,
+                'gender': current_tag.gender,
+                'number': current_tag.number,
+                'case': current_tag.case,
+                'index': i
+            })
 
-# Функция для проверки, является ли слово существительным или прилагательным
-def is_noun_or_adj(word):
-    parsed = morph.parse(word)[0]
-    return parsed.tag.POS in ['NOUN', 'ADJF', 'ADJS']
+    # Remove duplicate pairs
+    unique_pairs = list(set(matched_pairs))
 
-# Функция для проверки совпадения граммем (род, число, падеж)
-def match_grammemes(word1, word2):
-    parsed1 = morph.parse(word1)[0]
-    parsed2 = morph.parse(word2)[0]
-    # Проверка рода, числа и падежа
-    return (parsed1.tag.gender == parsed2.tag.gender and
-            parsed1.tag.number == parsed2.tag.number and
-            parsed1.tag.case == parsed2.tag.case)
+    # Return the result
+    return unique_pairs
 
-# Извлечение соседних пар слов
-valid_pairs = []
+def main():
+    file_path = 'file_text.txt'  # You can change this path if needed
+    results = process_text(file_path)
 
-for i in range(len(tokens) - 1):
-    word1, word2 = tokens[i], tokens[i+1]
-    if is_noun_or_adj(word1) and is_noun_or_adj(word2) and match_grammemes(word1, word2):
-        # Лемматизация слов
-        lemma1 = morph.parse(word1)[0].normal_form
-        lemma2 = morph.parse(word2)[0].normal_form
-        valid_pairs.append((lemma1, lemma2))
+    # Output the final results
+    print('\nFound matching word pairs:')
+    for pair in results:
+        print(pair)
 
-print('\nFinal Result:\n')
-# Вывод результатов
-for pair in valid_pairs:
-    print(pair)
+if __name__ == "__main__":
+    main()
