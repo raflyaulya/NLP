@@ -1,33 +1,30 @@
-import gensim
+import gensim 
 import re
 
-def run_model():
-    # Задаем список позитивных слов
-    words = ['столик_NOUN', 'кабинет_NOUN']
+def main():
+    # Определяем список слов (положительный контекст), для которых хотим найти похожие слова
+    positive = ['стул_NOUN', 'офис_NOUN']
+    # Определяем пустой список для слов отрицательного контекста (в данном случае его нет)
+    negative = []
 
-    model_file = "file_cbow.txt"
-    # model_file = "D:\\file_cbow.txt"
+    file_src = 'D:\\file_cbow.txt'
     
-    w2v_model = gensim.models.KeyedVectors.load_word2vec_format(model_file, binary=False)
+    # Загружаем модель word2vec с помощью KeyedVectors из библиотеки gensim
+    word2vec = gensim.models.KeyedVectors.load_word2vec_format(file_src, binary=False)
 
-    # Получаем векторы для 'столик_NOUN' и 'кабинет_NOUN'
-    vector_table = w2v_model["столик_NOUN"]
-    vector_office = w2v_model["кабинет_NOUN"]
+    # Используем модель для поиска 10 самых похожих слов (topn=10)
+    # на основе списка положительных слов (т.е. 'стул_NOUN' и 'офис_NOUN')
+    dist = word2vec.most_similar(positive=positive, topn=10)
 
-    # Выполняем суммирование векторов
-    total_vector = vector_table + vector_office
+    # Компилируем регулярное выражение для поиска слов, оканчивающихся на '_NOUN'
+    # Шаблон '(.*)_NOUN' захватывает слово перед '_NOUN'
+    pat = re.compile('(.*)_NOUN')
 
-    # Ищем 10 ближайших слов к полученному вектору
-    similar_words = w2v_model.most_similar(positive=[total_vector], topn=10)
-
-    # Регулярное выражение для фильтрации слов с суффиксом "_NOUN"
-    noun_pattern = re.compile("(.*)_NOUN")
-
-    # Печатаем слова, которые соответствуют формату "_NOUN"
-    for word in similar_words:
-        match = noun_pattern.match(word[0])
-        if match:
-            print(match.group(1))
+    # Проходим по списку похожих слов и их оценок схожести
+    for i in dist:
+        e = pat.match(i[0])
+        if e is not None:  
+            print(e.group(1))
 
 if __name__ == '__main__':
-    run_model()
+    main()
