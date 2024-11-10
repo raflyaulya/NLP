@@ -65,7 +65,8 @@ def process_text(file_path):
     return unique_pairs
 
 def main():
-    file_path = 'D:\\ИПМКН\\Семестр_7\\Обработка_естественного_языка\\NLP\\lab_1\\file_text.txt'  # Update this path as needed
+    # file_path = 'D:\\ИПМКН\\Семестр_7\\Обработка_естественного_языка\\NLP\\lab_1\\file_text.txt' 
+    file_path = 'file_text.txt' 
     results = process_text(file_path)
 
     # Output the final results
